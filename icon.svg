@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="90%">
+      <stop offset="0%" stop-color="#F4EFE2"/>
+      <stop offset="100%" stop-color="#E5DDC9"/>
+    </radialGradient>
+  </defs>
+  <!-- full bleed fill for maskable safe zone -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- subtle outer ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#E0D9CC" stroke-width="1.5"/>
+  <!-- terra accent top-right -->
+  <circle cx="358" cy="154" r="18" fill="#BD6943" opacity="0.85"/>
+  <!-- green accent bottom-left -->
+  <circle cx="154" cy="358" r="12" fill="#93B186" opacity="0.75"/>
+  <!-- serif italic "D" -->
+  <text
+    x="258" y="320"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="248"
+    font-style="italic"
+    font-weight="600"
+    text-anchor="middle"
+    fill="#1A1814">D</text>
+</svg>
