@@ -1,4 +1,4 @@
-const CACHE = 'dieta-v1';
+const CACHE = 'dieta-v2';
 
 const PRECACHE = [
   './',

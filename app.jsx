@@ -691,7 +691,8 @@ function ViewSpesa({ todayIdx, range, setRange, checked, toggleCheck }) {
 
 /* ────── APP ROOT ────── */
 function DietaApp({ tweakDate }) {
-  const today = tweakDate || new Date();
+  // Usa mezzanotte italiana (CEST/CET) indipendentemente dal fuso del dispositivo
+  const today = tweakDate || window.getRomeToday();
   const todayIdx = window.cycleIndexFor(today);
   const [tab, setTab] = React.useState('oggi');
   const [viewIdx, setViewIdx] = React.useState(todayIdx);
@@ -699,6 +700,19 @@ function DietaApp({ tweakDate }) {
   const [range, setRange] = React.useState(RANGES[0]);
   const [checked, setChecked] = React.useState({});
   const toggleCheck = (key) => setChecked(s => ({ ...s, [key]: !s[key] }));
+
+  // Ricarica la pagina a mezzanotte ora italiana così il giorno scatta correttamente
+  React.useEffect(() => {
+    if (tweakDate) return;
+    const msUntilMidnightRome = () => {
+      const romeStr = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Rome' });
+      const romeNow = new Date(romeStr);
+      const msSinceMidnight = (romeNow.getHours() * 3600 + romeNow.getMinutes() * 60 + romeNow.getSeconds()) * 1000 + romeNow.getMilliseconds();
+      return 86400000 - msSinceMidnight + 500; // +500ms di margine
+    };
+    const timer = setTimeout(() => window.location.reload(), msUntilMidnightRome());
+    return () => clearTimeout(timer);
+  }, [tweakDate]);
 
   // sync week when entering settimana tab
   React.useEffect(() => {
