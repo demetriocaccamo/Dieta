@@ -236,18 +236,22 @@ function MealCard({ kind, icon, time, items }) {
 }
 
 /* ────── VISTA OGGI ────── */
-function ViewOggi({ todayIdx, viewIdx, setViewIdx }) {
+function ViewOggi({ today, todayIdx, viewIdx, setViewIdx }) {
   const meals = window.mealsFor(viewIdx);
   const { week, day, cycleDay } = window.planCoordsFromIdx(viewIdx);
-  const offset = ((viewIdx - todayIdx) % 21 + 21) % 21;
-  const date = new Date(window.ANCHOR);
-  date.setDate(date.getDate() + (viewIdx - todayIdx));
+  // scarto in giorni rispetto a oggi, centrato in [-10, +10]
+  let rel = (viewIdx - todayIdx) % 21;
+  if (rel > 10) rel -= 21;
+  if (rel < -10) rel += 21;
+  // la data mostrata parte SEMPRE dalla data reale di oggi
+  const date = new Date(today);
+  date.setDate(date.getDate() + rel);
   const dayName = window.DAY_NAMES_LONG[date.getDay() === 0 ? 6 : date.getDay() - 1];
   const isToday = viewIdx === todayIdx;
   const eyebrowLabel = isToday ? 'OGGI' :
-    offset === 1 ? 'DOMANI' :
-    offset === 20 ? 'IERI' :
-    `+${offset} GG`;
+    rel === 1 ? 'DOMANI' :
+    rel === -1 ? 'IERI' :
+    rel > 0 ? `+${rel} GG` : `${rel} GG`;
 
   return (
     <div style={{ padding: '20px 22px 18px' }}>
@@ -544,7 +548,7 @@ const RANGES = [
   { id: 'w2', label: 'Sett. 3', kind: 'week', week: 2 },
 ];
 
-function ViewSpesa({ todayIdx, range, setRange, checked, toggleCheck }) {
+function ViewSpesa({ today, todayIdx, range, setRange, checked, toggleCheck }) {
   const idxs = range.kind === 'rel'
     ? window.rangeFromToday(todayIdx, range.days)
     : window.rangeForWeek(range.week);
@@ -552,8 +556,8 @@ function ViewSpesa({ todayIdx, range, setRange, checked, toggleCheck }) {
   const total = groups.reduce((n,g) => n + g.items.length, 0);
   const done  = groups.reduce((n,g) => n + g.items.filter(it => checked[it.n + (it.brand||'')]).length, 0);
 
-  const dateNow = new Date(window.ANCHOR);
-  const dateEnd = new Date(window.ANCHOR);
+  const dateNow = new Date(today);
+  const dateEnd = new Date(today);
   dateEnd.setDate(dateEnd.getDate() + (idxs.length - 1));
 
   const rangeLine = range.kind === 'rel'
@@ -731,10 +735,10 @@ function DietaApp({ tweakDate }) {
         paddingBottom: 96,
       }}>
         <AppHeader todayIdx={todayIdx} viewIdx={viewIdx} tab={tab}/>
-        {tab === 'oggi' && <ViewOggi todayIdx={todayIdx} viewIdx={viewIdx} setViewIdx={setViewIdx}/>}
+        {tab === 'oggi' && <ViewOggi today={today} todayIdx={todayIdx} viewIdx={viewIdx} setViewIdx={setViewIdx}/>}
         {tab === 'sett' && <ViewSettimana todayIdx={todayIdx} weekIdx={weekIdx} setWeekIdx={setWeekIdx} setViewIdx={setViewIdx} setTab={setTab}/>}
         {tab === 'ciclo' && <ViewCiclo todayIdx={todayIdx} setViewIdx={setViewIdx} setTab={setTab}/>}
-        {tab === 'spesa' && <ViewSpesa todayIdx={todayIdx} range={range} setRange={setRange} checked={checked} toggleCheck={toggleCheck}/>}
+        {tab === 'spesa' && <ViewSpesa today={today} todayIdx={todayIdx} range={range} setRange={setRange} checked={checked} toggleCheck={toggleCheck}/>}
       </div>
       <TabBar active={tab} onChange={setTab}/>
     </div>
