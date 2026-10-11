@@ -1,10 +1,12 @@
 /* plan-data.js — 21 giorni del piano + helpers shopping
-   Fonte: Schema Nutrizionale Personalizzato — Dott.ssa Laura Mazza
+   Fonte: Schema Nutrizionale Personalizzato (10-2026) — Dott.ssa Laura Mazza
 
    Categorie spesa:
      FV = Frutta & Verdura · P = Proteine · L = Latticini
      CL = Cereali & Legumi · D = Dispensa · B = Bevande & Altro
-   Ogni meal item: { t: testo, s: [shopping entries] }
+   Ogni giorno: { c: colazione, p: pranzo, m: merenda, d: cena }
+   Ogni meal item: { t: testo, s: [shopping entries], recipe?, batch?, free?, fast?, alt? }
+     batch: piatto cucinato una volta e mangiato in due pasti → in spesa conta una volta sola
    shopping entry: { n: nome, q?: quantità, c: categoria, brand?, gen?, note? }
 */
 
@@ -22,106 +24,115 @@ const CAT_LABEL = {
 const FRUTTO      = { t: '1 frutto fresco di stagione', s: [{ n: 'Frutta di stagione', q: '1', c: 'FV', gen: true }] };
 const VERDAP      = { t: 'Verdura cruda in apertura pasto', s: [{ n: 'Verdura cruda', c: 'FV', gen: true }] };
 const VERDMIX     = { t: 'Verdura cruda o cotta', s: [{ n: 'Verdura cruda o cotta', c: 'FV', gen: true }] };
-const TEV         = { t: 'Tè verde senza zucchero', s: [{ n: 'Tè verde', c: 'B' }] };
-const TISANA      = { t: 'Tisana senza zucchero', s: [{ n: 'Tisane miste', c: 'B' }] };
-const TEOT        = { t: 'Tè o tisana senza zucchero', s: [{ n: 'Tè verde', c: 'B' }, { n: 'Tisane miste', c: 'B' }] };
-const GRANOLA     = { t: 'Latte di mandorla o cocco con 5 cucchiai di granola (Ambrosiae)',
-                      s: [{ n: 'Latte di mandorla o cocco', q: '1L', c: 'B', note: 'livebetter.eu' },
-                          { n: 'Granola', brand: 'Ambrosiae', c: 'D' }] };
-const BANANA_BREAD= { t: 'Banana bread o plumcake cheto (vedi ricetta)',
-                      s: [{ n: 'Banana bread / plumcake cheto', c: 'D', note: 'fatto in casa' }] };
+const TEV         = { t: 'Tè verde senza zucchero — o orzo, caffè, tisane, acqua', s: [{ n: 'Tè verde', c: 'B' }] };
 const PASTO_LIBERO= { t: 'PASTO LIBERO', s: [], free: true };
-const SOLO_VERDURE= { t: 'Pasto di sole verdure', s: [{ n: 'Verdura cruda o cotta', c: 'FV', gen: true }] };
+const DIGIUNO     = { t: 'Digiuno', s: [], fast: true };
+const DIGIUNO_ALT = { ...DIGIUNO, alt: 'In alternativa: pasto di sole verdure' };
+
+/* colazioni */
+const PANE_MANDORLE = { t: 'Pane rustico a lievitazione naturale tostato con crema di mandorle e marmellata',
+                        s: [{n:'Pane a lievitazione naturale',c:'D'},{n:'Crema di mandorle 100%',c:'D'},{n:'Marmellata',c:'D'}] };
+const YOG_NOCI      = { t: 'Yogurt greco con noci, cannella e succo di limone',
+                        s: [{n:'Yogurt greco',c:'L'},{n:'Noci',c:'D'},{n:'Cannella',c:'D'},{n:'Limone',c:'FV'}] };
+const YOG_FRUTTO    = { t: 'Yogurt greco con 1 frutto fresco di stagione',
+                        s: [{n:'Yogurt greco',c:'L'},{n:'Frutta di stagione',q:'1',c:'FV',gen:true}] };
+const MUESLI        = { t: 'Latte di mandorla con 4 cucchiai di muesli',
+                        s: [{n:'Latte di mandorla',c:'B'},{n:'Muesli',c:'D'}] };
+const UOVA_GHEE     = { t: '2 uova strapazzate al burro ghee',
+                        s: [{n:'Uova',q:'2',c:'P'},{n:'Burro ghee',c:'D'}] };
+
+/* merende */
+const FRUTTA_SECCA  = { t: '1 pugno di frutta secca a guscio', s: [{n:'Frutta secca a guscio',c:'D'}] };
+const CIOCCOLATO    = { t: '2 quadrati di cioccolato fondente min 85%', s: [{n:'Cioccolato fondente min 85%',c:'D'}] };
+
+/* piatti cucinati una volta per due pasti */
+const PASTA_CECI = { t: 'Pasta e ceci (vedi ricetta)', recipe: 'pasta-ceci', batch: 'pasta-ceci',
+                     s: [{n:'Ceci lessati',q:'500g',c:'CL'},{n:'Ditalini',q:'160g',c:'CL'},
+                         {n:'Cipolla',c:'FV'},{n:'Aglio',c:'FV'},{n:'Carota',c:'FV'},{n:'Sedano',c:'FV'},
+                         {n:'Passata di pomodoro',q:'150ml',c:'D'},{n:'Rosmarino',c:'FV'}] };
+const ZUPPA_CEREALI = { t: 'Zuppa di cereali e legumi misti (comprare i mix secchi da cuocere)', batch: 'zuppa-cereali',
+                        s: [{n:'Mix secco cereali e legumi',c:'CL'}] };
+const ZUPPA_LENTICCHIE = { t: 'Zuppa di lenticchie con zucca e spinaci (vedi ricetta)', recipe: 'zuppa-lenticchie', batch: 'zuppa-lenticchie',
+                           s: [{n:'Lenticchie secche',q:'250g',c:'CL'},{n:'Zucca',q:'250g',c:'FV'},
+                               {n:'Spinacini freschi',q:'2 confezioni',c:'FV'},{n:'Scalogno',c:'FV'}] };
+const CARNE_BIANCA  = { t: '220 g di carne bianca (pollo, tacchino o coniglio)',
+                        s: [{n:'Carne bianca',q:'220g',c:'P',gen:true,note:'pollo/tacchino/coniglio'}] };
 
 /* ══════════════════ SETTIMANA 1 ══════════════════ */
 const W1 = [
   /* LUN */
   {
-    c: [TEV,
-        { t: 'Kefir intero 150 g con lamponi, cannella e nocciole',
-          s: [{n:'Kefir intero',q:'150g',c:'L'},{n:'Lamponi',c:'FV'},{n:'Cannella',c:'D'},{n:'Nocciole',c:'D'}] }],
-    p: [{ t: 'Insalata con verdure miste, avocado e salmone affumicato selvaggio',
-          s: [{n:'Insalata mista',c:'FV'},{n:'Avocado',c:'FV'},{n:'Salmone affumicato selvaggio',c:'P'}] },
+    c: [TEV, PANE_MANDORLE],
+    p: [VERDMIX,
+        { t: 'Frittata (3 uova) con porro', s: [{n:'Uova',q:'3',c:'P'},{n:'Porro',c:'FV'}] },
         FRUTTO],
-    d: [VERDAP,
-        { t: 'Caponata di ceci e verdure dolci con dressing al sesamo (vedi ricetta)',
-          s: [{n:'Ceci cotti',q:'150-200g',c:'CL'},{n:'Verdure dolci miste',q:'250g',c:'FV'},{n:'Tahina',c:'D'}] },
-        { t: '70 g di riso apollo', s: [{n:'Riso apollo',q:'70g',c:'CL'}] },
+    m: [FRUTTA_SECCA],
+    d: [VERDMIX,
+        { t: '250 g di merluzzo con pomodorini, capperi e olive taggiasche',
+          s: [{n:'Merluzzo',q:'250g',c:'P'},{n:'Pomodorini',c:'FV'},{n:'Capperi',c:'D'},{n:'Olive taggiasche',c:'D'}] },
+        { t: 'Patata al vapore', s: [{n:'Patata',c:'FV'}] },
         FRUTTO],
   },
   /* MAR */
   {
-    c: [TISANA, GRANOLA],
-    p: [VERDAP,
-        { t: 'Caponata di ceci e verdure dolci con dressing al sesamo (vedi ricetta)',
-          s: [{n:'Ceci cotti',q:'150-200g',c:'CL'},{n:'Verdure dolci miste',q:'250g',c:'FV'},{n:'Tahina',c:'D'}] },
-        { t: '70 g di riso apollo', s: [{n:'Riso apollo',q:'70g',c:'CL'}] },
-        FRUTTO],
-    d: [VERDMIX,
-        { t: '220 g di carne bianca (pollo, tacchino o coniglio)',
-          s: [{n:'Carne bianca',q:'220g',c:'P',gen:true,note:'pollo/tacchino/coniglio'}] },
-        FRUTTO],
+    c: [TEV, YOG_NOCI],
+    p: [VERDMIX, CARNE_BIANCA, FRUTTO],
+    m: [CIOCCOLATO],
+    d: [VERDAP, PASTA_CECI, FRUTTO],
   },
   /* MER */
   {
-    c: [{ t: 'Tisana alla malva senza zucchero', s: [{n:'Tisana alla malva',c:'B'}] },
-        { t: 'Pane rustico a lievitazione naturale tostato con ricotta, fragole e cacao amaro',
-          s: [{n:'Pane a lievitazione naturale',c:'D'},{n:'Ricotta',c:'L'},{n:'Fragole',c:'FV'},{n:'Cacao amaro',c:'D'}] }],
-    p: [{ t: 'Insalata di fagioli, patata, pomodorini e 2 uova sode — condire con sale, olio e 1 cucchiaio di senape in grani',
-          s: [{n:'Fagioli',c:'CL'},{n:'Patata',c:'FV'},{n:'Pomodorini',c:'FV'},{n:'Uova',q:'2',c:'P'},{n:'Senape in grani',c:'D'}] },
+    c: [TEV,
+        { t: '60 g di prosciutto crudo di Parma', s: [{n:'Prosciutto crudo di Parma',q:'60g',c:'P'}] },
         FRUTTO],
-    d: [VERDAP,
-        { t: '80 g di pasta di saraceno con asparagi',
-          s: [{n:'Pasta di saraceno',q:'80g',c:'CL'},{n:'Asparagi',c:'FV'}] },
+    p: [VERDAP, PASTA_CECI],
+    m: [FRUTTA_SECCA],
+    d: [VERDMIX,
+        { t: '250 g di branzino al forno', s: [{n:'Branzino',q:'250g',c:'P'}] },
         FRUTTO],
   },
   /* GIO */
   {
-    c: [TEV,
-        { t: 'Overnight chia pudding al cacao e fragole (vedi ricetta)',
-          s: [{n:'Semi di chia',q:'30g',c:'D'},{n:'Yogurt greco',q:'2 cucchiai',c:'L'},
-              {n:'Cacao amaro',c:'D'},{n:'Bevanda vegetale',q:'150ml',c:'B'},{n:'Fragole',c:'FV'}] }],
-    p: [VERDMIX,
-        { t: '120 g di carpaccio di manzo con rucola e scaglie di grana',
-          s: [{n:'Carpaccio di manzo',q:'120g',c:'P'},{n:'Rucola',c:'FV'},{n:'Grana padano',c:'L'}] }],
-    d: [VERDMIX,
-        { t: '250 g di pesce', s: [{n:'Pesce',q:'250g',c:'P',gen:true}] },
-        { t: 'Batata a pasta arancione', s: [{n:'Batata',c:'FV'}] },
+    c: [TEV, UOVA_GHEE, FRUTTO],
+    p: [{ t: 'Insalata di cavolo cappuccio con mela, noci e 70 g di parmigiano reggiano',
+          s: [{n:'Cavolo cappuccio',c:'FV'},{n:'Mela',c:'FV'},{n:'Noci',c:'D'},{n:'Parmigiano reggiano',q:'70g',c:'L'}] }],
+    m: [CIOCCOLATO],
+    d: [VERDAP,
+        { t: '80 g di riso basmati integrale con zucca e rosmarino (non va cucinato come un risotto)',
+          s: [{n:'Riso basmati integrale',q:'80g',c:'CL'},{n:'Zucca',c:'FV'},{n:'Rosmarino',c:'FV'}] },
         FRUTTO],
   },
   /* VEN */
   {
-    c: [TISANA, GRANOLA],
-    p: [{ t: 'Insalata con verdure miste e 100 g di feta',
-          s: [{n:'Insalata mista',c:'FV'},{n:'Feta',q:'100g',c:'L'}] },
-        FRUTTO],
-    d: [VERDAP,
-        { t: '80 g di riso rosso con verdure e nasello',
-          s: [{n:'Riso rosso',q:'80g',c:'CL'},{n:'Verdure miste',c:'FV'},{n:'Nasello',c:'P'}] },
+    c: [TEV,
+        { t: 'Pane rustico a lievitazione naturale tostato con ricotta e fichi',
+          s: [{n:'Pane a lievitazione naturale',c:'D'},{n:'Ricotta',c:'L'},{n:'Fichi',c:'FV'}] }],
+    p: [{ t: 'Insalata di rucola con pesca o pera e 200 g di fagioli cannellini — condire con sale, olio e aceto balsamico',
+          s: [{n:'Rucola',c:'FV'},{n:'Pesca o pera',c:'FV'},{n:'Fagioli cannellini',q:'200g',c:'CL'},{n:'Aceto balsamico',c:'D'}] }],
+    m: [FRUTTA_SECCA],
+    d: [VERDMIX,
+        { t: '150 g di hamburger grass fed alla piastra', s: [{n:'Hamburger grass fed',q:'150g',c:'P'}] },
         FRUTTO],
   },
   /* SAB */
   {
     c: [TEV,
-        { t: 'Kefir intero 150 g con kiwi e mandorle',
-          s: [{n:'Kefir intero',q:'150g',c:'L'},{n:'Kiwi',c:'FV'},{n:'Mandorle',c:'D'}] }],
-    p: [VERDMIX,
-        { t: '250 g di sgombro al vapore condito con sale, olio, limone e origano',
-          s: [{n:'Sgombro',q:'250g',c:'P'},{n:'Limone',c:'FV'},{n:'Origano',c:'D'}] },
+        { t: 'Yogurt greco con 1 frutto fresco di stagione e cannella',
+          s: [{n:'Yogurt greco',c:'L'},{n:'Frutta di stagione',q:'1',c:'FV',gen:true},{n:'Cannella',c:'D'}] }],
+    p: [{ t: 'Insalata, pomodorini, avocado e 100 g di sgombro in vetro al naturale (da condire)',
+          s: [{n:'Insalata',c:'FV'},{n:'Pomodorini',c:'FV'},{n:'Avocado',c:'FV'},
+              {n:'Sgombro in vetro al naturale',q:'100g',c:'P'}] },
         FRUTTO],
-    d: [VERDAP,
-        { t: '80 g di legumotti Barilla al pesto (banco frigo, pochi ingredienti o fatto in casa)',
-          s: [{n:'Legumotti',brand:'Barilla',q:'80g',c:'CL'},{n:'Pesto',c:'D'}] },
-        FRUTTO],
+    m: [FRUTTA_SECCA],
+    d: [{ t: 'Pizza marinara (no mozzarella) con alici, capperi e olive',
+          s: [{n:'Pizza marinara',c:'D',note:'fuori o asporto'}] }],
   },
   /* DOM */
   {
-    c: [TEOT,
-        { t: 'Pancake con fragole e crema di mandorle (vedi ricetta)',
-          s: [{n:'Uovo',q:'1',c:'P'},{n:'Yogurt greco',q:'110g',c:'L'},{n:'Farina d\'avena',q:'30g',c:'CL'},
-              {n:'Fragole',c:'FV'},{n:'Crema di mandorle 100%',c:'D'}] }],
+    c: [TEV, MUESLI],
     p: [PASTO_LIBERO],
-    d: [SOLO_VERDURE, FRUTTO],
+    m: [],
+    d: [DIGIUNO_ALT],
   },
 ];
 
@@ -129,91 +140,73 @@ const W1 = [
 const W2 = [
   /* LUN */
   {
-    c: [TEOT,
-        { t: 'Pane rustico a lievitazione naturale con crema di mandorle e marmellata',
-          s: [{n:'Pane a lievitazione naturale',c:'D'},{n:'Crema di mandorle 100%',c:'D'},{n:'Marmellata',c:'D'}] }],
-    p: [VERDMIX,
-        { t: 'Frittata (2 uova) con agretti o altre verdure',
-          s: [{n:'Uova',q:'2',c:'P'},{n:'Agretti o spinaci',c:'FV'}] },
-        FRUTTO],
-    d: [VERDAP,
-        { t: 'Zuppa di fave (vedi ricetta)',
-          s: [{n:'Fave fresche o surgelate',q:'500g scusciate',c:'CL'},
-              {n:'Pancetta a cubetti o speck',q:'100g',c:'P'},
-              {n:'Cipolla',c:'FV'},{n:'Carota',c:'FV'},{n:'Patata',c:'FV'}] },
-        FRUTTO],
+    c: [TEV, YOG_NOCI],
+    p: [VERDMIX, CARNE_BIANCA, FRUTTO],
+    m: [FRUTTA_SECCA],
+    d: [VERDAP, ZUPPA_CEREALI, FRUTTO],
   },
   /* MAR */
   {
-    c: [TEOT,
-        { t: 'Yogurt greco intero 150 g con miele, cannella, noci e succo di limone',
-          s: [{n:'Yogurt greco intero',q:'150g',c:'L'},{n:'Miele',c:'D'},{n:'Cannella',c:'D'},
-              {n:'Noci',c:'D'},{n:'Limone',c:'FV'}] }],
-    p: [VERDAP,
-        { t: 'Zuppa di fave (vedi ricetta)',
-          s: [{n:'Fave fresche o surgelate',q:'500g scusciate',c:'CL'},
-              {n:'Pancetta a cubetti o speck',q:'100g',c:'P'},
-              {n:'Cipolla',c:'FV'},{n:'Carota',c:'FV'},{n:'Patata',c:'FV'}] },
-        FRUTTO],
+    c: [TEV, PANE_MANDORLE],
+    p: [VERDAP, ZUPPA_CEREALI, FRUTTO],
+    m: [{ t: '50 g di parmigiano reggiano', s: [{n:'Parmigiano reggiano',q:'50g',c:'L'}] }],
     d: [VERDMIX,
-        { t: '250 g di pesce', s: [{n:'Pesce',q:'250g',c:'P',gen:true}] },
+        { t: '3 uova all\'occhio di bue al burro ghee', s: [{n:'Uova',q:'3',c:'P'},{n:'Burro ghee',c:'D'}] },
         FRUTTO],
   },
   /* MER */
   {
-    c: [TEV,
-        { t: '2 uova strapazzate al burro ghee con lamponi',
-          s: [{n:'Uova',q:'2',c:'P'},{n:'Burro ghee',c:'D'},{n:'Lamponi',c:'FV'}] }],
-    p: [{ t: 'Insalata caprese con 150 g di mozzarella di bufala',
-          s: [{n:'Mozzarella di bufala',q:'150g',c:'L'},{n:'Pomodori',c:'FV'},{n:'Basilico',c:'FV'}] },
+    c: [TEV, YOG_FRUTTO],
+    p: [VERDMIX,
+        { t: '100 g di roastbeef affettato condito con olio e limone',
+          s: [{n:'Roastbeef affettato',q:'100g',c:'P'},{n:'Limone',c:'FV'}] },
         FRUTTO],
-    d: [{ t: '70 g di cous cous integrale con verdure, curry e piselli',
-          s: [{n:'Cous cous integrale',q:'70g',c:'CL'},{n:'Verdure miste',c:'FV'},{n:'Curry',c:'D'},{n:'Piselli',c:'CL'}] },
+    m: [FRUTTA_SECCA],
+    d: [VERDMIX,
+        { t: '250 g di orata', s: [{n:'Orata',q:'250g',c:'P'}] },
         FRUTTO],
   },
   /* GIO */
   {
-    c: [TEV,
-        { t: 'Kefir intero 150 g con fragole e 2 pezzetti di cioccolato fondente',
-          s: [{n:'Kefir intero',q:'150g',c:'L'},{n:'Fragole',c:'FV'},{n:'Cioccolato fondente >80%',c:'D'}] }],
-    p: [{ t: '70 g di cous cous integrale con verdure, curry e piselli',
-          s: [{n:'Cous cous integrale',q:'70g',c:'CL'},{n:'Verdure miste',c:'FV'},{n:'Curry',c:'D'},{n:'Piselli',c:'CL'}] },
+    c: [TEV, UOVA_GHEE, FRUTTO],
+    p: [{ t: 'Insalata con verdure miste e 120 g di feta',
+          s: [{n:'Insalata mista',c:'FV'},{n:'Feta',q:'120g',c:'L'}] },
         FRUTTO],
+    m: [CIOCCOLATO],
     d: [VERDMIX,
-        { t: '220 g di carne rossa grass fed', s: [{n:'Carne rossa grass fed',q:'220g',c:'P'}] },
-        FRUTTO],
+        { t: '90 g di pasta di grano saraceno con broccoli, acciuga sott\'olio e olive taggiasche',
+          s: [{n:'Pasta di grano saraceno',q:'90g',c:'CL'},{n:'Broccoli',c:'FV'},
+              {n:'Acciughe sott\'olio',c:'P'},{n:'Olive taggiasche',c:'D'}] }],
   },
   /* VEN */
   {
-    c: [TISANA, GRANOLA],
-    p: [{ t: 'Asparagi', s: [{n:'Asparagi',c:'FV'}] },
-        { t: '3 uova all\'occhio di bue al burro ghee',
-          s: [{n:'Uova',q:'3',c:'P'},{n:'Burro ghee',c:'D'}] },
+    c: [TEV, PANE_MANDORLE],
+    p: [{ t: 'Insalata di carote con 200 g di ceci (ok in vetro al naturale) — condire con sale, olio, succo di limone e curry',
+          s: [{n:'Carote',c:'FV'},{n:'Ceci in vetro al naturale',q:'200g',c:'CL'},{n:'Limone',c:'FV'},{n:'Curry',c:'D'}] },
         FRUTTO],
+    m: [FRUTTA_SECCA],
     d: [VERDMIX,
-        { t: '350 g di calamari in padella con olio, limone e prezzemolo',
-          s: [{n:'Calamari',q:'350g',c:'P'},{n:'Limone',c:'FV'},{n:'Prezzemolo',c:'FV'}] },
+        { t: '250 g di nasello al vapore condito con olio ed erbe aromatiche',
+          s: [{n:'Nasello',q:'250g',c:'P'},{n:'Erbe aromatiche',c:'FV'}] },
         FRUTTO],
   },
   /* SAB */
   {
-    c: [TEV,
-        { t: 'Pane rustico a lievitazione naturale tostato con avocado condito',
-          s: [{n:'Pane a lievitazione naturale',c:'D'},{n:'Avocado',c:'FV'}] }],
-    p: [VERDMIX,
-        { t: '220 g di carne bianca',
-          s: [{n:'Carne bianca',q:'220g',c:'P',gen:true,note:'pollo/tacchino/coniglio'}] },
-        { t: 'Macedonia di frutta fresca con cannella',
-          s: [{n:'Frutta mista',c:'FV',gen:true},{n:'Cannella',c:'D'}] }],
-    d: [VERDAP,
-        { t: '80 g di pasta di legumi con zucchine',
-          s: [{n:'Pasta di legumi',q:'80g',c:'CL'},{n:'Zucchine',c:'FV'}] }],
+    c: [TEV, YOG_FRUTTO],
+    p: [{ t: 'Insalata di fagiolini con 3 uova sode',
+          s: [{n:'Fagiolini',c:'FV'},{n:'Uova',q:'3',c:'P'}] },
+        FRUTTO],
+    m: [FRUTTA_SECCA],
+    d: [{ t: 'Pinzimonio di verdure', s: [{n:'Verdure per pinzimonio',c:'FV',gen:true}] },
+        { t: 'Polenta taragna (ok rapida) con funghi trifolati o in umido',
+          s: [{n:'Polenta taragna',c:'CL'},{n:'Funghi',c:'FV'}] }],
   },
   /* DOM */
   {
-    c: [TEV, BANANA_BREAD],
+    c: [TEV, MUESLI],
     p: [PASTO_LIBERO],
-    d: [SOLO_VERDURE, FRUTTO],
+    m: [],
+    d: [DIGIUNO],
   },
 ];
 
@@ -221,83 +214,72 @@ const W2 = [
 const W3 = [
   /* LUN */
   {
-    c: [TEV, BANANA_BREAD],
-    p: [{ t: 'Insalata con verdure miste, avocado e tonno in olio EVO 90 g (Asdomar)',
-          s: [{n:'Insalata mista',c:'FV'},{n:'Avocado',c:'FV'},
-              {n:'Tonno in olio EVO',brand:'Asdomar',q:'90g',c:'P'}] },
+    c: [TEV, PANE_MANDORLE],
+    p: [VERDMIX,
+        { t: '250 g di alici o sardine in padella con olio, aglio, limone e prezzemolo (farsele pulire in pescheria e aprire a libro)',
+          s: [{n:'Alici o sardine',q:'250g',c:'P',note:'pulite e aperte a libro'},{n:'Aglio',c:'FV'},
+              {n:'Limone',c:'FV'},{n:'Prezzemolo',c:'FV'}] },
         FRUTTO],
-    d: [{ t: 'Insalata di riso basmati integrale (vedi ricetta)',
-          s: [{n:'Riso basmati integrale',q:'200g',c:'CL'},{n:'Melanzane',c:'FV'},
-              {n:'Pomodorini',c:'FV'},{n:'Pinoli',q:'2 cucchiai',c:'D'},
-              {n:'Ceci cotti',q:'1 vasetto',c:'CL'},{n:'Olive taggiasche',q:'2 cucchiai',c:'D'},
-              {n:'Basilico',c:'FV'}] },
-        FRUTTO],
+    m: [CIOCCOLATO],
+    d: [VERDAP, ZUPPA_LENTICCHIE, FRUTTO],
   },
   /* MAR */
   {
-    c: [TEV, BANANA_BREAD],
-    p: [{ t: 'Insalata di riso basmati integrale (vedi ricetta)',
-          s: [{n:'Riso basmati integrale',q:'200g',c:'CL'},{n:'Melanzane',c:'FV'},
-              {n:'Pomodorini',c:'FV'},{n:'Pinoli',q:'2 cucchiai',c:'D'},
-              {n:'Ceci cotti',q:'1 vasetto',c:'CL'},{n:'Olive taggiasche',q:'2 cucchiai',c:'D'},
-              {n:'Basilico',c:'FV'}] },
-        FRUTTO],
+    c: [TEV, YOG_NOCI],
+    p: [VERDAP, ZUPPA_LENTICCHIE, FRUTTO],
+    m: [{ t: 'Parmigiano reggiano', s: [{n:'Parmigiano reggiano',c:'L'}] }],
     d: [VERDMIX,
-        { t: 'Frittata (2 uova) con cipollotto di Tropea e patata',
-          s: [{n:'Uova',q:'2',c:'P'},{n:'Cipollotto di Tropea',c:'FV'},{n:'Patata',c:'FV'}] },
+        { t: 'Frittata (3 uova) con spinaci', s: [{n:'Uova',q:'3',c:'P'},{n:'Spinaci',c:'FV'}] },
         FRUTTO],
   },
   /* MER */
   {
-    c: [TEV, BANANA_BREAD],
+    c: [TEV, MUESLI],
     p: [VERDMIX,
-        { t: '150 g di ricotta di pecora condita',
-          s: [{n:'Ricotta di pecora',q:'150g',c:'L'}] },
+        { t: '100 g di bresaola con olio e limone', s: [{n:'Bresaola',q:'100g',c:'P'},{n:'Limone',c:'FV'}] },
         FRUTTO],
-    d: [VERDAP,
-        { t: '80 g di pasta di farro al sugo di melanzane e pesce spada',
-          s: [{n:'Pasta di farro',q:'80g',c:'CL'},{n:'Melanzane',c:'FV'},{n:'Pesce spada',c:'P'}] },
+    m: [FRUTTA_SECCA],
+    d: [VERDMIX,
+        { t: '90 g di pasta di farro con zucchine e gamberi',
+          s: [{n:'Pasta di farro',q:'90g',c:'CL'},{n:'Zucchine',c:'FV'},{n:'Gamberi',c:'P'}] },
         FRUTTO],
   },
   /* GIO */
   {
-    c: [TEV, BANANA_BREAD],
-    p: [{ t: 'Insalata di rucola con pesca e 150 g di cannellini al naturale — condire con sale, olio e aceto balsamico',
-          s: [{n:'Rucola',c:'FV'},{n:'Pesca',c:'FV'},
-              {n:'Cannellini in vetro al naturale',q:'150g',c:'CL'},{n:'Aceto balsamico',c:'D'}] }],
-    d: [VERDMIX,
-        { t: '150 g di hamburger grass fed', s: [{n:'Hamburger grass fed',q:'150g',c:'P'}] },
-        FRUTTO],
+    c: [TEV, UOVA_GHEE, FRUTTO],
+    p: [{ t: 'Panino con hummus di ceci e verdure grigliate o pomodoro condito',
+          s: [{n:'Pane per panino',c:'D'},{n:'Hummus di ceci',c:'CL'},{n:'Verdure da grigliare o pomodoro',c:'FV'}] }],
+    m: [FRUTTA_SECCA],
+    d: [VERDMIX, CARNE_BIANCA, FRUTTO],
   },
   /* VEN */
   {
-    c: [TEV,
-        { t: 'Kefir intero 150 g con lamponi, cannella e nocciole',
-          s: [{n:'Kefir intero',q:'150g',c:'L'},{n:'Lamponi',c:'FV'},{n:'Cannella',c:'D'},{n:'Nocciole',c:'D'}] }],
+    c: [TEV, PANE_MANDORLE],
     p: [VERDMIX,
-        { t: '100 g di bresaola condita con olio e limone',
-          s: [{n:'Bresaola',q:'100g',c:'P'},{n:'Limone',c:'FV'}] },
+        { t: '150 g di caprino condito', s: [{n:'Caprino',q:'150g',c:'L'}] },
         FRUTTO],
+    m: [CIOCCOLATO],
     d: [VERDMIX,
-        { t: '3 uova strapazzate al burro ghee',
-          s: [{n:'Uova',q:'3',c:'P'},{n:'Burro ghee',c:'D'}] },
-        { t: 'Avocado', s: [{n:'Avocado',c:'FV'}] },
+        { t: 'Insalata di polipo con patate e olive taggiasche',
+          s: [{n:'Polipo',c:'P'},{n:'Patate',c:'FV'},{n:'Olive taggiasche',c:'D'}] },
         FRUTTO],
   },
   /* SAB */
   {
-    c: [TISANA, GRANOLA],
+    c: [TEV, YOG_FRUTTO],
     p: [VERDMIX,
-        { t: '250 g di pesce', s: [{n:'Pesce',q:'250g',c:'P',gen:true}] }],
-    d: [{ t: 'Pizza', s: [{n:'Pizza',c:'D',note:'fuori o asporto'}] }],
+        { t: '220 g di carne rossa grass fed', s: [{n:'Carne rossa grass fed',q:'220g',c:'P'}] }],
+    m: [FRUTTO, FRUTTA_SECCA],
+    d: [VERDAP,
+        { t: '90 g di legumotti Barilla al sugo di pomodoro fresco',
+          s: [{n:'Legumotti',brand:'Barilla',q:'90g',c:'CL'},{n:'Pomodori freschi',c:'FV'}] }],
   },
   /* DOM */
   {
-    c: [TEV,
-        { t: 'Kefir intero 150 g con kiwi e mandorle',
-          s: [{n:'Kefir intero',q:'150g',c:'L'},{n:'Kiwi',c:'FV'},{n:'Mandorle',c:'D'}] }],
+    c: [TEV, MUESLI],
     p: [PASTO_LIBERO],
-    d: [SOLO_VERDURE, FRUTTO],
+    m: [],
+    d: [DIGIUNO],
   },
 ];
 
@@ -311,10 +293,10 @@ const MONTHS = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
 /* ──────────────────────────────────────────────────────────
    LOGICA CICLICA
 
-   Ancora: Lunedì 11 maggio 2026 = Settimana 1 Lunedì = indice 0
+   Ancora: Lunedì 12 ottobre 2026 (inizio schema 10-2026) = Settimana 1 Lunedì = indice 0
    Il ciclo si ripete ogni 21 giorni.
 ────────────────────────────────────────────────────────── */
-const ANCHOR       = new Date(2026, 4, 11); // 11 maggio 2026 — Lun W1 — idx 0
+const ANCHOR       = new Date(2026, 9, 12); // 12 ottobre 2026 — Lun W1 — idx 0
 const ANCHOR_INDEX = 0;
 
 /* Restituisce la data di OGGI nel fuso orario di Roma (CET/CEST).
@@ -357,16 +339,32 @@ function formatDate(date) {
   return `${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
+/* Somma quantità con la stessa unità ('3' + '2' → '5', '250g' + '250g' → '500g').
+   Se le unità non coincidono restituisce null. */
+function sumQuantities(qs) {
+  const parsed = qs.map(q => q.match(/^(\d+)\s*(g|ml)?$/));
+  if (parsed.some(m => !m)) return null;
+  const unit = parsed[0][2] || '';
+  if (parsed.some(m => (m[2] || '') !== unit)) return null;
+  return parsed.reduce((n, m) => n + Number(m[1]), 0) + unit;
+}
+
 /* ── Aggregazione lista della spesa ── */
 function aggregateShopping(idxs) {
   const groups = {};
   CAT_ORDER.forEach(c => { groups[c] = new Map(); });
 
+  const batches = new Set();
   for (const idx of idxs) {
     const meals = mealsFor(idx);
-    const allItems = [...meals.c, ...meals.p, ...meals.d];
+    const allItems = [...meals.c, ...meals.p, ...meals.m, ...meals.d];
     for (const item of allItems) {
-      if (item.free) continue;
+      if (item.free || item.fast) continue;
+      // piatto cucinato una volta per due pasti: si compra una volta sola
+      if (item.batch) {
+        if (batches.has(item.batch)) continue;
+        batches.add(item.batch);
+      }
       for (const s of item.s) {
         const key = s.n + (s.brand ? ' · ' + s.brand : '');
         const grp = groups[s.c];
@@ -385,7 +383,7 @@ function aggregateShopping(idxs) {
     items: Array.from(groups[cat].values()).map(e => ({
       ...e,
       qDisplay: e.qs.length
-        ? (e.count > 1 ? `${e.count} × ${e.qs[0]}` : e.qs[0])
+        ? (sumQuantities(e.qs) || (e.count > 1 ? `${e.count} × ${e.qs[0]}` : e.qs[0]))
         : (e.count > 1 ? `× ${e.count}` : ''),
     })).sort((a, b) => a.n.localeCompare(b.n)),
   })).filter(g => g.items.length > 0);

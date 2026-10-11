@@ -1,9 +1,10 @@
-const CACHE = 'dieta-v3';
+const CACHE = 'dieta-v4';
 
 const PRECACHE = [
   './',
   './index.html',
   './plan-data.js',
+  './recipes-data.js',
   './app.jsx',
   './manifest.json',
   './icon.svg',

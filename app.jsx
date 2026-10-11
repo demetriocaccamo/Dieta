@@ -45,6 +45,8 @@ function I({ name, size = 22, color = 'currentColor', sw = 1.6 }) {
     leaf: <g {...p}><path d="M5 19c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 19l8-8"/></g>,
     free: <g {...p}><path d="M5 19c4-10 10-14 14-14M9 8l3 3M19 5l-4 14"/></g>,
     dot:  <circle cx="12" cy="12" r="3" fill={color}/>,
+    book: <g {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></g>,
+    x:    <g {...p}><path d="M18 6 6 18M6 6l12 12"/></g>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block', flexShrink: 0 }}>{M[name]}</svg>;
 }
@@ -170,9 +172,129 @@ function TabBar({ active, onChange }) {
   );
 }
 
+/* ────── RECIPE SHEET (overlay bottom) ────── */
+function RecipeCard({ r }) {
+  return (
+    <div>
+      <div style={{ marginBottom: 10 }}>
+        <Chip tone="soft" size="sm">{r.tag}</Chip>
+        <div style={{
+          fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 500,
+          fontStyle: 'italic', lineHeight: 1.15, color: D.ink, marginTop: 8,
+        }}>{r.title}</div>
+      </div>
+      {r.ingredients && r.ingredients.length > 0 && (<>
+        <Eyebrow style={{ marginBottom: 10 }}>Ingredienti</Eyebrow>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 22 }}>
+          {r.ingredients.map((ing, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: D.pencil, minWidth: 62, flexShrink: 0 }}>{ing.q}</span>
+              <span style={{ fontFamily: FONT_BODY, fontSize: 15, color: D.ink, lineHeight: 1.4 }}>{ing.n}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop: `1px solid ${D.rule}`, marginBottom: 18 }}/>
+      </>)}
+      <Eyebrow style={{ marginBottom: 14 }}>{r.ingredients && r.ingredients.length > 0 ? 'Procedimento' : 'Opzioni'}</Eyebrow>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {r.steps.map((step, i) => (
+          <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <span style={{
+              fontFamily: FONT_MONO, fontSize: 11, color: D.paper,
+              background: D.terra, width: 22, height: 22, borderRadius: 99,
+              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>{i + 1}</span>
+            <span style={{ fontFamily: FONT_BODY, fontSize: 14.5, color: D.inkSoft, lineHeight: 1.55 }}>{step}</span>
+          </div>
+        ))}
+      </div>
+      {r.note && (
+        <div style={{
+          marginTop: 20, padding: '10px 14px',
+          background: D.paperWarm, borderRadius: 10,
+          fontFamily: FONT_BODY, fontSize: 12.5, color: D.inkSoft, lineHeight: 1.5,
+        }}>{r.note}</div>
+      )}
+    </div>
+  );
+}
+
+function RecipeSheet({ recipeId, onClose }) {
+  if (!recipeId) return null;
+  // normalizza: stringa → array
+  const ids = Array.isArray(recipeId) ? recipeId : [recipeId];
+  const recipes = ids.map(id => (window.RECIPES || {})[id]).filter(Boolean);
+  if (recipes.length === 0) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(26,24,20,0.45)' }}/>
+      <div style={{
+        position: 'relative', background: D.paper,
+        borderRadius: '20px 20px 0 0', maxHeight: '88vh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 -4px 32px rgba(26,24,20,0.18)',
+      }}>
+        {/* handle + close */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px 4px' }}>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 99, background: D.rule }}/>
+          </div>
+          <button onClick={onClose} style={{ border: 0, background: 'transparent', padding: 4, cursor: 'pointer' }}>
+            <I name="x" size={22} color={D.pencil}/>
+          </button>
+        </div>
+        {/* scrollable body */}
+        <div style={{ overflowY: 'auto', padding: '8px 22px 56px' }}>
+          {recipes.map((r, idx) => (
+            <div key={r.id}>
+              {idx > 0 && (
+                <div style={{
+                  margin: '32px 0 28px',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                  <div style={{ flex: 1, height: 1, background: D.rule }}/>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: D.pencil, letterSpacing: 2, textTransform: 'uppercase' }}>oppure</span>
+                  <div style={{ flex: 1, height: 1, background: D.rule }}/>
+                </div>
+              )}
+              <RecipeCard r={r}/>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ────── MEAL CARD (Oggi) ────── */
-function MealCard({ kind, icon, time, items }) {
+function MealCard({ kind, icon, time, items, onRecipe }) {
+  if (!items || items.length === 0) return null;
   const isFree = items.length === 1 && items[0].free;
+  const isFast = items.length === 1 && items[0].fast;
+  if (isFast) {
+    return (
+      <div style={{
+        border: `1.4px dashed ${D.greenInk}`,
+        background: D.greenTint + '66',
+        borderRadius: 18, padding: '20px 22px',
+        display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <I name={icon} size={18} color={D.greenInk}/>
+          <Eyebrow color={D.greenInk}>{kind}</Eyebrow>
+          <span style={{ marginLeft: 'auto', fontFamily: FONT_MONO, fontSize: 10, color: D.greenInk + 'aa' }}>{time}</span>
+        </div>
+        <div style={{
+          fontFamily: FONT_DISPLAY, fontStyle: 'italic',
+          fontSize: 28, fontWeight: 500, color: D.greenInk, lineHeight: 1.1,
+        }}>Digiuno</div>
+        <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: D.greenInk, lineHeight: 1.5 }}>
+          bere solo tè, acqua o tisane senza zucchero
+          {items[0].alt && <><br/>{items[0].alt.toLowerCase()}</>}
+        </div>
+      </div>
+    );
+  }
   if (isFree) {
     return (
       <div style={{
@@ -211,22 +333,50 @@ function MealCard({ kind, icon, time, items }) {
         {items.map((it, k) => {
           const text = it.t;
           const isGenericLast = /frutto di stagione|sole verdure/i.test(text);
-          return (
-            <li key={k} style={{
-              fontFamily: text.length > 60 ? FONT_BODY : FONT_DISPLAY,
-              fontSize: text.length > 60 ? 14.5 : 17,
-              fontWeight: text.length > 60 ? 500 : 400,
-              fontStyle: text.length > 60 ? 'normal' : 'normal',
-              lineHeight: 1.4,
-              color: isGenericLast && k === items.length - 1 ? D.pencil : D.ink,
-              display: 'flex', gap: 10, alignItems: 'flex-start',
-            }}>
+          const hasRecipe = !!it.recipe;
+          const row = (
+            <>
               <span style={{
                 width: 4, height: 4, borderRadius: 99,
                 background: isGenericLast && k === items.length - 1 ? D.pencil : D.terra,
                 marginTop: 9, flexShrink: 0,
               }}/>
               <span style={{ flex: 1 }}>{text}</span>
+              {hasRecipe && (
+                <span style={{ flexShrink: 0, marginTop: 3, opacity: 0.55 }}>
+                  <I name="book" size={14} color={D.terraInk}/>
+                </span>
+              )}
+            </>
+          );
+          if (hasRecipe) {
+            return (
+              <li key={k} style={{ listStyle: 'none' }}>
+                <button onClick={() => onRecipe && onRecipe(it.recipe)} style={{
+                  border: 0, background: 'transparent', padding: 0, cursor: 'pointer',
+                  width: '100%', textAlign: 'left',
+                  fontFamily: text.length > 60 ? FONT_BODY : FONT_DISPLAY,
+                  fontSize: text.length > 60 ? 14.5 : 17,
+                  fontWeight: text.length > 60 ? 500 : 400,
+                  lineHeight: 1.4,
+                  color: D.ink,
+                  display: 'flex', gap: 10, alignItems: 'flex-start',
+                }}>
+                  {row}
+                </button>
+              </li>
+            );
+          }
+          return (
+            <li key={k} style={{
+              fontFamily: text.length > 60 ? FONT_BODY : FONT_DISPLAY,
+              fontSize: text.length > 60 ? 14.5 : 17,
+              fontWeight: text.length > 60 ? 500 : 400,
+              lineHeight: 1.4,
+              color: isGenericLast && k === items.length - 1 ? D.pencil : D.ink,
+              display: 'flex', gap: 10, alignItems: 'flex-start',
+            }}>
+              {row}
             </li>
           );
         })}
@@ -236,7 +386,7 @@ function MealCard({ kind, icon, time, items }) {
 }
 
 /* ────── VISTA OGGI ────── */
-function ViewOggi({ today, todayIdx, viewIdx, setViewIdx }) {
+function ViewOggi({ today, todayIdx, viewIdx, setViewIdx, onRecipe }) {
   const meals = window.mealsFor(viewIdx);
   const { week, day, cycleDay } = window.planCoordsFromIdx(viewIdx);
   // scarto in giorni rispetto a oggi, centrato in [-10, +10]
@@ -310,9 +460,10 @@ function ViewOggi({ today, todayIdx, viewIdx, setViewIdx }) {
 
       {/* meals */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 22 }}>
-        <MealCard kind="Colazione" icon="sun"  time="08·00" items={meals.c}/>
-        <MealCard kind="Pranzo"    icon="bowl" time="13·00" items={meals.p}/>
-        <MealCard kind="Cena"      icon="moon" time="20·00" items={meals.d}/>
+        <MealCard kind="Colazione" icon="sun"  time="08·00" items={meals.c} onRecipe={onRecipe}/>
+        <MealCard kind="Pranzo"    icon="bowl" time="13·00" items={meals.p} onRecipe={onRecipe}/>
+        <MealCard kind="Merenda"   icon="leaf" time="17·00" items={meals.m} onRecipe={onRecipe}/>
+        <MealCard kind="Cena"      icon="moon" time="20·00" items={meals.d} onRecipe={onRecipe}/>
       </div>
 
       {/* footer note */}
@@ -323,7 +474,7 @@ function ViewOggi({ today, todayIdx, viewIdx, setViewIdx }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <I name="info" size={14} color={D.pencil}/>
-          <span>Bevande consentite: tè verde, tisane, caffè senza zucchero, acqua. Latte di mandorla o cocco consigliato: livebetter.eu</span>
+          <span>Al posto del tè verde a colazione vanno bene anche orzo, caffè, tisane senza zucchero o acqua.</span>
         </div>
       </div>
     </div>
@@ -383,17 +534,18 @@ function ViewSettimana({ todayIdx, weekIdx, setWeekIdx, setViewIdx, setTab }) {
                 {[
                   { lbl: 'Col', m: meals.c },
                   { lbl: 'Pra', m: meals.p },
+                  { lbl: 'Mrd', m: meals.m },
                   { lbl: 'Cen', m: meals.d },
-                ].map((row, i) => {
-                  const isFree = row.m[0]?.free;
-                  // pick the most descriptive item — skip free, generic openers, and beverages
+                ].filter(row => row.m.length > 0).map((row, i) => {
+                  const isFree = row.m[0]?.free || row.m[0]?.fast;
+                  // pick the most descriptive item — skip free, generic fruit/veg, and beverages
                   const pickMain = (items) => {
                     const nonGen = items.find(x =>
                       !x.free && x.s && x.s.length &&
-                      x.s.some(s => !s.gen && s.c !== 'B'));
+                      x.s.some(s => s.c !== 'B' && !(s.gen && s.c === 'FV')));
                     return nonGen?.t || items.find(x => !x.free)?.t || items[0].t;
                   };
-                  const main = isFree ? 'PASTO LIBERO' : pickMain(row.m);
+                  const main = row.m[0]?.fast ? 'DIGIUNO' : isFree ? 'PASTO LIBERO' : pickMain(row.m);
                   return (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'baseline', gap: 8,
@@ -677,9 +829,9 @@ function ViewSpesa({ today, todayIdx, range, setRange, checked, toggleCheck }) {
           lineHeight: 1.5, padding: '8px 0',
           borderTop: `1.5px dashed ${D.ink}`,
         }}>
-          * Bevande consentite: tè verde, tisane,<br/>
-          &nbsp;&nbsp;caffè senza zucchero, acqua.<br/>
-          * Latte mandorla/cocco: livebetter.eu
+          * Colazione: tè verde, o in alternativa<br/>
+          &nbsp;&nbsp;orzo, caffè, tisane senza zucchero, acqua.<br/>
+          * Zuppe e pasta e ceci: una spesa per due pasti.
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 6, fontFamily: FONT_DISPLAY, fontSize: 15, fontStyle: 'italic', color: D.terraInk }}>
@@ -703,6 +855,7 @@ function DietaApp({ tweakDate }) {
   const [weekIdx, setWeekIdx] = React.useState(Math.floor(todayIdx / 7));
   const [range, setRange] = React.useState(RANGES[0]);
   const [checked, setChecked] = React.useState({});
+  const [openRecipe, setOpenRecipe] = React.useState(null);
   const toggleCheck = (key) => setChecked(s => ({ ...s, [key]: !s[key] }));
 
   // Ricarica la pagina a mezzanotte ora italiana così il giorno scatta correttamente
@@ -735,12 +888,13 @@ function DietaApp({ tweakDate }) {
         paddingBottom: 96,
       }}>
         <AppHeader todayIdx={todayIdx} viewIdx={viewIdx} tab={tab}/>
-        {tab === 'oggi' && <ViewOggi today={today} todayIdx={todayIdx} viewIdx={viewIdx} setViewIdx={setViewIdx}/>}
+        {tab === 'oggi' && <ViewOggi today={today} todayIdx={todayIdx} viewIdx={viewIdx} setViewIdx={setViewIdx} onRecipe={setOpenRecipe}/>}
         {tab === 'sett' && <ViewSettimana todayIdx={todayIdx} weekIdx={weekIdx} setWeekIdx={setWeekIdx} setViewIdx={setViewIdx} setTab={setTab}/>}
         {tab === 'ciclo' && <ViewCiclo todayIdx={todayIdx} setViewIdx={setViewIdx} setTab={setTab}/>}
         {tab === 'spesa' && <ViewSpesa today={today} todayIdx={todayIdx} range={range} setRange={setRange} checked={checked} toggleCheck={toggleCheck}/>}
       </div>
       <TabBar active={tab} onChange={setTab}/>
+      <RecipeSheet recipeId={openRecipe} onClose={() => setOpenRecipe(null)}/>
     </div>
   );
 }
@@ -748,7 +902,7 @@ function DietaApp({ tweakDate }) {
 Object.assign(window, {
   D, FONT_DISPLAY, FONT_BODY, FONT_MONO, FONT_RECEIPT,
   I, Chip, Eyebrow, CycleStrip,
-  AppHeader, TabBar, MealCard,
+  AppHeader, TabBar, MealCard, RecipeCard, RecipeSheet,
   ViewOggi, ViewSettimana, ViewCiclo, ViewSpesa,
   DietaApp, RANGES,
 });
